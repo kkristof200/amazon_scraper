@@ -10,8 +10,7 @@ class Parser():
         categories = []
         features = []
         video_urls = []
-        price = None
-        
+
         soup = BeautifulSoup(response.content, 'lxml')
         try:
             parsed_json = json.loads(response.text.split('var obj = jQuery.parseJSON(\'')[1].split('\')')[0].replace('\\\'', '\''))
@@ -34,25 +33,23 @@ class Parser():
         
         elif feature_table_first is None:
             features = None
+        
+        categories = []
+        categories_container = soup.find('div', id='wayfinding-breadcrumbs_container')
+        if categories_container is not None:
+            category_as = categories_container.find_all('a', _class='a-link-normal a-color-tertiary')
 
-        categ_table_first = soup.find('div', id = 'wayfinding§-breadcrumbs_container')
-
-        if categ_table_first is not None:
-            table_for_categories = categ_table_first.find('ul', class_ ='a-unordered-list a-horizontal a-size-small')
-
-            for li in table_for_categories.find_all("li"):
-                category = li.get_text().strip()
-    
-            if category != '›':
-                categories.append(category)
-                
-        elif categ_table_first is None:
-            categories = None
-
-        price_element = soup.find('span', id="priceblock_ourprice")
-
-        if price_element is not None:
-            price = price_element.get_text()
+            for category_a in category_as:
+                try:
+                    categories.append(BeautifulSoup(category_a.text, "lxml").text.replace('\\', '/').replace('<', ' ').replace('>', ' ').strip().lower())
+                except:
+                    pass
+        
+        try:
+            price_text = soup.find('span', id="priceblock_ourprice").text.replace('$', '').strip()
+            price = float(price_text)
+        except:
+            price = None
 
         table_for_product_info = soup.find('table', id="productDetails_detailBullets_sections1", class_="a-keyvalue prodDetTable")
 
