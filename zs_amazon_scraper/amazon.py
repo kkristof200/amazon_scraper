@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import validators
 
@@ -35,19 +35,22 @@ class Amazon:
 
         return asins, None
 
-    def get_product(self, product_id: str) -> (Dict, List):        
-        response_details = request(URLCreator.create_product_url(product_id))
+    def get_product_details(self, asin: str) -> Optional[Dict]:
         try:
-            product_details = self.parser.parse_product(response_details)
+            return self.parser.parse_product(
+                request(URLCreator.create_product_url(asin))
+            )
         except Exception as e:
-            print('parse_product', e)
-            product_details = None
-
-        response_reviews = request(URLCreator.create_product_reviews_url(product_id))
+            print('get_product_details', e)
+            
+            return None
+    
+    def get_product_reviews(self, asin: str) -> Optional[Dict]:
         try:
-            product_reviews = self.parser.parse_reviews(response_reviews)
+            return self.parser.parse_reviews(
+                request(URLCreator.create_product_reviews_url(asin))
+            )
         except Exception as e:
-            print('parse_reviews', e)
-            product_reviews = None
+            print('get_product_reviews', e)
 
-        return product_details, product_reviews
+            return None
