@@ -1,7 +1,5 @@
 from typing import List, Dict, Optional
 
-import validators
-
 from kov_utils.request import request
 
 from .helpers.parser import Parser
@@ -11,29 +9,23 @@ class Amazon:
     def __init__(self):
         self.parser = Parser()
 
-    def get_product_ids_and_next_page(self, url: str) -> (List[str], str):
-        if validators.url(url):
+    def get_product_ids_and_next_page(self, url: str) -> (Optional[List[str]], Optional[str]):
+        try:
             response = request(url)
 
-            try:
-                return (self.parser.parse_products_page(response), self.parser.next_products_page(response))
-            except:
-                pass
+            return (self.parser.parse_products_page(response), self.parser.next_products_page(response))
+        except Exception as e:
+            print('get_product_ids_and_next_page', e)
 
-        return None, None
+            return None, None
 
-    def get_product_ids_from_grid_based_page(self, url: str) -> (List[str], str):
-        if validators.url(url):
-            response = request(url)
+    def get_asins_from_grid_based_page(self, url: str) -> Optional[List[str]]:
+        try:
+            return self.parser.parse_products_page_grid_style(request(url))
+        except Exception as e:
+            print('get_asins_from_grid_based_page', e)
 
-            try:
-                asins = self.parser.parse_products_page_grid_style(response)
-            except Exception as e:
-                print('get_product_ids_from_grid_based_page', e)
-
-                asins = None
-
-        return asins, None
+            return None
 
     def get_product_details(self, asin: str) -> Optional[Dict]:
         try:
