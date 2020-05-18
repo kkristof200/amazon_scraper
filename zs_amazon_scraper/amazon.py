@@ -36,7 +36,7 @@ class Amazon:
             print('get_product_details', e)
             
             return None
-
+    
     def get_product_reviews(self, asin: str) -> Optional[Dict]:
         try:
             return self.parser.parse_reviews(

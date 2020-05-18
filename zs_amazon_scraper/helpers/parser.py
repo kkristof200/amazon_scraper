@@ -28,22 +28,27 @@ class Parser():
         if feature_table_first is not None:
             table_for_features = feature_table_first.find('ul', class_ = "a-unordered-list a-vertical a-spacing-none")
 
-            for li in table_for_features.find_all('li'):
-                features.append(li.get_text().strip())
+            if table_for_features is not None:
+                for li in table_for_features.find_all('li'):
+                    features.append(li.get_text().strip())
         
         elif feature_table_first is None:
             features = None
         
         categories = []
-        categories_container = soup.find('div', id='wayfinding-breadcrumbs_container')
-        if categories_container is not None:
-            category_as = categories_container.find_all('a', _class='a-link-normal a-color-tertiary')
 
-            for category_a in category_as:
-                try:
-                    categories.append(BeautifulSoup(category_a.text, "lxml").text.replace('\\', '/').replace('<', ' ').replace('>', ' ').strip().lower())
-                except:
-                    pass
+        try:
+            categories_container = soup.find('div', id='wayfinding-breadcrumbs_container')
+            if categories_container is not None:
+                category_as = categories_container.find_all('a', _class='a-link-normal a-color-tertiary')
+
+                for category_a in category_as:
+                    try:
+                        categories.append(BeautifulSoup(category_a.text, "lxml").text.replace('\\', '/').replace('<', ' ').replace('>', ' ').strip().lower())
+                    except:
+                        pass
+        except:
+            pass
         
         try:
             price_text = soup.find('span', id="priceblock_ourprice").text.replace('$', '').strip()
@@ -58,9 +63,9 @@ class Parser():
             for tr in table_for_product_info.find_all('tr'):
                 key = tr.find('th').get_text().strip()
 
-            if key not in ['Customer Reviews', 'Best Sellers Rank']:
-                value = tr.find('td').get_text().strip()
-                product_information_dict[key] = value
+                if key is not None and key not in ['Customer Reviews', 'Best Sellers Rank']:
+                    value = tr.find('td').get_text().strip()
+                    product_information_dict[key] = value
 
         image_details = {}
 
@@ -106,7 +111,7 @@ class Parser():
         }
     
     def parse_reviews(self, response) -> Optional[List[Dict]]:
-        # response = 'https://www.amazon.com/gp/customer-reviews/aj/private/reviewsGallery/get-data-for-reviews-image-gallery-for-asin?asin='
+        # 'https://www.amazon.com/gp/customer-reviews/aj/private/reviewsGallery/get-data-for-reviews-image-gallery-for-asin?asin='
         try:
             reviews_json = json.loads(response.text)        
         except Exception as e:
