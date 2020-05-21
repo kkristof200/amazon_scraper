@@ -11,7 +11,7 @@ class Amazon:
 
     def get_product_ids_and_next_page(self, url: str) -> (Optional[List[str]], Optional[str]):
         try:
-            response = request(url)
+            response = request(url, fake_useragent=True)
 
             return (self.parser.parse_products_page(response), self.parser.next_products_page(response))
         except Exception as e:
@@ -21,7 +21,7 @@ class Amazon:
 
     def get_asins_from_grid_based_page(self, url: str) -> Optional[List[str]]:
         try:
-            return self.parser.parse_products_page_grid_style(request(url))
+            return self.parser.parse_products_page_grid_style(request(url, fake_useragent=True))
         except Exception as e:
             print('get_asins_from_grid_based_page', e)
 
@@ -30,7 +30,7 @@ class Amazon:
     def get_product_details(self, asin: str) -> Optional[Dict]:
         try:
             return self.parser.parse_product(
-                request(URLCreator.product_url(asin))
+                request(URLCreator.product_url(asin), fake_useragent=True)
             )
         except Exception as e:
             print('get_product_details', e)
@@ -40,7 +40,7 @@ class Amazon:
     def get_product_reviews_with_images(self, asin: str) -> Optional[Dict]:
         try:
             return self.parser.parse_reviews_with_images(
-                request(URLCreator.product_reviews_with_images_url(asin))
+                request(URLCreator.product_reviews_with_images_url(asin), fake_useragent=True)
             )
         except Exception as e:
             print('get_product_reviews_with_images', e)
@@ -50,7 +50,7 @@ class Amazon:
     def get_product_reviews(self, asin: str, star_rating: str = 'five_star') -> Optional[List[Dict]]:
         try:
             return self.parser.parse_reviews(
-                request(URLCreator.product_reviews_url(asin, star_rating=star_rating, page_num=1))
+                request(URLCreator.product_reviews_url(asin, star_rating=star_rating, page_num=1), fake_useragent=True)
             )
         except Exception as e:
             print('get_product_reviews', e)

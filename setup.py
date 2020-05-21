@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="zs_amazon_scraper",
-    version="0.2.4",
+    version="0.2.5",
     author="Kovács Kristóf-Attila and Péntek Zsolt",
     description="amazon_scraper",
     long_description='',
