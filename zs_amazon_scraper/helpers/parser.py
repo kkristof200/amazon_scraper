@@ -3,7 +3,7 @@ import json
 
 from bs4 import BeautifulSoup
 
-from kov_utils import strings
+from kcu import strings
 
 class Parser():
     def parse_product(self, response) -> Optional[Dict]:
@@ -13,50 +13,48 @@ class Parser():
 
         soup = BeautifulSoup(response.content, 'lxml')
         try:
-            parsed_json = json.loads(response.text.split('var obj = jQuery.parseJSON(\'')[1].split('\')')[0].replace('\\\'', '\''))
+            parsed_json = json.loads(strings.between(response.text, 'var obj = jQuery.parseJSON(\'', '\')'))
         except Exception as e:
             print(e)
             
             return None
 
         title = parsed_json['title']
+        asin = parsed_json['mediaAsin']
         images = parsed_json
         videos = parsed_json['videos']
-        
-        feature_table_first = soup.find('div', id="feature-bullets", class_ = "a-section a-spacing-medium a-spacing-top-small")
 
-        if feature_table_first is not None:
-            table_for_features = feature_table_first.find('ul', class_ = "a-unordered-list a-vertical a-spacing-none")
-
-            if table_for_features is not None:
-                for li in table_for_features.find_all('li'):
-                    features.append(li.get_text().strip())
-        
-        elif feature_table_first is None:
-            features = None
-        
-        categories = []
+        features = []
 
         try:
-            categories_container = soup.find('div', id='wayfinding-breadcrumbs_container')
-            if categories_container is not None:
-                category_as = categories_container.find_all('a', _class='a-link-normal a-color-tertiary')
-
-                for category_a in category_as:
-                    try:
-                        categories.append(BeautifulSoup(category_a.text, "lxml").text.replace('\\', '/').replace('<', ' ').replace('>', ' ').strip().lower())
-                    except:
-                        pass
+            for feature in soup.find('div', {'class':'a-section a-spacing-medium a-spacing-top-small'}).find_all('span', {'class':'a-list-item'}):
+                try:
+                    features.append(feature.get_text().strip())
+                except:
+                    pass
         except:
             pass
+
+        try:
+            categories_container = soup.find('div', {'id':'wayfinding-breadcrumbs_container'})
+
+            for category_a in categories_container.find_all('a', {'class':'a-link-normal a-color-tertiary'}):
+                try:
+                    categories.append(BeautifulSoup(category_a.text, "lxml").text.replace('\\', '/').replace('<', ' ').replace('>', ' ').strip().lower())
+                except:
+                    pass
+        except:
+            pass
+
+        # print('categories', categories)
         
         try:
-            price_text = soup.find('span', id="priceblock_ourprice").text.replace('$', '').strip()
+            price_text = soup.find('span', {'id':'priceblock_ourprice'}).text.replace('$', '').strip()
             price = float(price_text)
         except:
             price = None
 
-        table_for_product_info = soup.find('table', id="productDetails_detailBullets_sections1", class_="a-keyvalue prodDetTable")
+        table_for_product_info = soup.find('table', {'id':'productDetails_detailBullets_sections1', 'class':'a-keyvalue prodDetTable'})
 
         product_information_dict = {}
         if table_for_product_info is not None:
@@ -73,9 +71,8 @@ class Parser():
             colors = images['colorToAsin']
 
             for color_name, color_dict in colors.items():
-                # images_urls = []
-                asin = color_dict['asin']
-                image_details[asin] = {
+                _asin = color_dict['asin']
+                image_details[_asin] = {
                     'name' : color_name,
                     'image_urls' : []
                 }
@@ -84,11 +81,29 @@ class Parser():
 
                 for elem in images_by_color:
                     if 'hiRes' in elem: 
-                        image_details[asin]['image_urls'].append(elem['hiRes'])
+                        image_details[_asin]['image_urls'].append(elem['hiRes'])
 
             for url in videos:
                 if 'url' in url:
                     video_urls.append(url['url'])
+        
+        if image_details is None or image_details == {}:
+            try:
+                images_json = json.loads(strings.between(response.text, '\'colorImages\': { \'initial\': ', '}]},') + '}]')
+
+                image_details[asin] = {
+                    'name' : asin,
+                    'image_urls' : []
+                }
+
+                for image_json in images_json:
+                    try:
+                        image_details[asin]['image_urls'].append(image_json['large'])
+                    except Exception as e:
+                        print(e)
+                        pass
+            except:
+                pass
 
         try:
             associated_asins_string = response.text.split('dimensionToAsinMap" : ')[1].split('},')[0]
@@ -110,7 +125,7 @@ class Parser():
             'associated_asins': associated_asins
         }
     
-    def parse_reviews(self, response) -> Optional[List[Dict]]:
+    def parse_reviews_with_images(self, response) -> Optional[List[Dict]]:
         # 'https://www.amazon.com/gp/customer-reviews/aj/private/reviewsGallery/get-data-for-reviews-image-gallery-for-asin?asin='
         try:
             reviews_json = json.loads(response.text)        
@@ -152,12 +167,27 @@ class Parser():
                 pass
 
         return sorted(list(reviews.values()), key=lambda k: k['upvotes'], reverse=True)
-    
+
+    def parse_reviews(self, response) -> Optional[List[str]]:
+        soup = BeautifulSoup(response.content, 'lxml')
+        reviews = []
+
+        for elem in soup.find_all('span', {'data-hook':'review-body'}):
+            try:
+                reviews.append({
+                    'text':elem.find('span').get_text().strip(),
+                    'rating':5
+                })
+            except:
+                pass
+
+        return reviews
+
     def parse_products_page_grid_style(self, response):
         soup = BeautifulSoup(response.content, 'lxml')
         asin_ids = []
 
-        products_container = soup.find('ol', id = 'zg-ordered-list')
+        products_container = soup.find('ol', {'id':'zg-ordered-list'})
         
         for li in products_container.find_all('li'):
             try:
@@ -172,11 +202,11 @@ class Parser():
     def parse_products_page(self, response):   
         asin_ids = []
         soup = BeautifulSoup(response.content, 'lxml')
-        results = soup.find_all('span', class_="a-declarative")
+        results = soup.find_all('span', {'class':'a-declarative'})
         
         for elem in results:
             try:
-                asin_id = strings.string_between(elem['data-a-popover'], 'asin=', '&')
+                asin_id = strings.between(elem['data-a-popover'], 'asin=', '&')
 
                 if asin_id is not None:
                     asin_ids.append(asin_id)
@@ -189,7 +219,7 @@ class Parser():
 
         soup = BeautifulSoup(response.content, 'lxml')
 
-        next_pag = soup.find('li', class_="a-last")
+        next_pag = soup.find('li', {'class':'a-last'})
         next_page_url = next_pag.find('a', href=True)
 
         return next_page_url['href']

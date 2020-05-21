@@ -1,6 +1,6 @@
 from typing import List, Dict, Optional
 
-from kov_utils.request import request
+from kcu.request import request
 
 from .helpers.parser import Parser
 from .utils.url_creator import AmazonURLCreator as URLCreator
@@ -30,17 +30,27 @@ class Amazon:
     def get_product_details(self, asin: str) -> Optional[Dict]:
         try:
             return self.parser.parse_product(
-                request(URLCreator.create_product_url(asin))
+                request(URLCreator.product_url(asin))
             )
         except Exception as e:
             print('get_product_details', e)
             
             return None
-    
-    def get_product_reviews(self, asin: str) -> Optional[Dict]:
+
+    def get_product_reviews_with_images(self, asin: str) -> Optional[Dict]:
+        try:
+            return self.parser.parse_reviews_with_images(
+                request(URLCreator.product_reviews_with_images_url(asin))
+            )
+        except Exception as e:
+            print('get_product_reviews_with_images', e)
+
+            return None
+
+    def get_product_reviews(self, asin: str, star_rating: str = 'five_star') -> Optional[List[Dict]]:
         try:
             return self.parser.parse_reviews(
-                request(URLCreator.create_product_reviews_url(asin))
+                request(URLCreator.product_reviews_url(asin, star_rating=star_rating, page_num=1))
             )
         except Exception as e:
             print('get_product_reviews', e)
