@@ -12,11 +12,9 @@ class Parser():
         video_urls = []
 
         soup = BeautifulSoup(response.content, 'lxml')
-        try:
-            parsed_json = json.loads(strings.between(response.text, 'var obj = jQuery.parseJSON(\'', '\')'))
-        except Exception as e:
-            print(e)
-            
+        parsed_json = self.__json_loads(strings.between(response.text, 'var obj = jQuery.parseJSON(\'', '\')'))
+
+        if parsed_json is None:
             return None
 
         title = parsed_json['title']
@@ -89,30 +87,33 @@ class Parser():
         
         if image_details is None or image_details == {}:
             try:
-                images_json = json.loads(strings.between(response.text, '\'colorImages\': { \'initial\': ', '}]},') + '}]')
+                images_json = self.__json_loads(strings.between(response.text, '\'colorImages\': { \'initial\': ', '}]},') + '}]')
 
-                image_details[asin] = {
-                    'name' : asin,
-                    'image_urls' : []
-                }
+                if images_json is not None:
+                    image_details[asin] = {
+                        'name' : asin,
+                        'image_urls' : []
+                    }
 
-                for image_json in images_json:
-                    try:
-                        image_details[asin]['image_urls'].append(image_json['large'])
-                    except Exception as e:
-                        print(e)
-                        pass
+                    for image_json in images_json:
+                        try:
+                            image_details[asin]['image_urls'].append(image_json['large'])
+                        except Exception as e:
+                            print(e)
+                            pass
             except:
                 pass
 
-        try:
-            associated_asins_string = response.text.split('dimensionToAsinMap" : ')[1].split('},')[0]
-            associated_asins_json = json.loads(associated_asins_string + '}')
+        associated_asins = []
 
-            for val in associated_asins_json.values():
-                associated_asins.append(val)
+        try:
+            associated_asins_json = self.__json_loads(strings.between(response.text, 'dimensionToAsinMap', '},') + '}')
+
+            if associated_asins_json is not None:
+                for val in associated_asins_json.values():
+                    associated_asins.append(val)
         except:
-            associated_asins = []
+            pass
 
         return {
             'title': title, 
@@ -128,7 +129,7 @@ class Parser():
     def parse_reviews_with_images(self, response) -> Optional[List[Dict]]:
         # 'https://www.amazon.com/gp/customer-reviews/aj/private/reviewsGallery/get-data-for-reviews-image-gallery-for-asin?asin='
         try:
-            reviews_json = json.loads(response.text)        
+            reviews_json = self.__json_loads(response.text)
         except Exception as e:
             print(e)
 
@@ -216,10 +217,20 @@ class Parser():
         return asin_ids
 
     def next_products_page(self, response):
-
         soup = BeautifulSoup(response.content, 'lxml')
 
         next_pag = soup.find('li', {'class':'a-last'})
         next_page_url = next_pag.find('a', href=True)
 
         return next_page_url['href']
+
+    def __json_loads(self, s: str) -> Optional[Dict]:
+        try:
+            return json.loads(s)
+        except:
+            try:
+                return json.loads(s.replace('\\\'', '\''))
+            except Exception as e:
+                print(e)
+        
+        return None
