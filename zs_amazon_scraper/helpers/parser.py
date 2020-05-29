@@ -107,7 +107,7 @@ class Parser():
         associated_asins = []
 
         try:
-            associated_asins_json = self.__json_loads(strings.between(response.text, 'dimensionToAsinMap', '},') + '}')
+            associated_asins_json = self.__json_loads(strings.between(response.text, 'dimensionToAsinMap :', '},').strip() + '}')
 
             if associated_asins_json is not None:
                 for val in associated_asins_json.values():
